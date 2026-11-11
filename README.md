@@ -17,8 +17,8 @@
 ## Настройки магазина
 
 ```env
-NEXT_PUBLIC_ADMIN_WHATSAPP="77758330223"
-NEXT_PUBLIC_INSTAGRAM_URL="https://www.instagram.com/maison_zhanele/"
+NEXT_PUBLIC_ADMIN_WHATSAPP="YOUR NUMBER"
+NEXT_PUBLIC_INSTAGRAM_URL="YOUR INSTAGRAM"
 ```
 
 Заказ из корзины открывает WhatsApp сразу с номером `+7 775 833 02 23` и выбранными товарами. Покупатель не заполняет аккаунт или платёжную форму.
