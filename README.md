@@ -1,39 +1,37 @@
 # Maison Zhanele
 
-Премиальный e-commerce каталог украшений на Next.js, Prisma и PostgreSQL. Клиентская часть поддерживает русский/казахский языки, мобильный интерфейс, корзину и передачу заказа в WhatsApp.
+A premium e-commerce catalog for jewelry, built with Next.js, Prisma, and PostgreSQL. The client-side interface supports Russian and Kazakh, features a mobile-responsive design, a shopping cart, and an option to send orders via WhatsApp.
 
-## Локальный запуск
+## Local Setup
 
-1. Скопируйте `.env.example` в `.env` и заполните секретные значения.
-2. Установите зависимости: `npm.cmd ci`.
-3. Примените локальную схему: `npm.cmd run db:push`.
-4. Заполните демо-данные: `npm.cmd run db:seed`.
-5. Запустите приложение: `npm.cmd run dev`.
+1. Copy `.env.example` to `.env` and fill in the required secret values.
+2. Install dependencies: `npm.cmd ci`.
+3. Apply the local schema: `npm.cmd run db:push`.
+4. Seed the database with demo data: `npm.cmd run db:seed`.
+5. Start the application: `npm.cmd run dev`.
 
-В PowerShell используйте `npm.cmd`, если политика выполнения блокирует `npm.ps1`.
+If you are using PowerShell and the execution policy blocks `npm.ps1`, please use `npm.cmd` instead.
 
-Seed требует непустые `SEED_ADMIN_EMAIL` и `SEED_ADMIN_PASSWORD`. Пароль не имеет значения по умолчанию, не выводится в логах и не хранится в `.env.example`.
+The seeding process requires non-empty values ​​for `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`. The password has no default value; it is not logged anywhere and is not included in `.env.example`.
 
-## Доступ к админке
+## Accessing the Admin Panel
 
-Парольный обход `/admin` доступен только при одновременном выполнении всех условий:
+Bypassing the password requirement for the `/admin` route is only possible when all of the following conditions are met:
 
 - `NODE_ENV=development`;
 - `ADMIN_LOCAL_BYPASS=true`;
-- `NEXT_PUBLIC_APP_URL` указывает на `http://localhost:3000` или `http://127.0.0.1:3000`;
-- запрос пришёл на `localhost` или `127.0.0.1`.
+- `NEXT_PUBLIC_APP_URL` is set to `http://localhost:3000` or `http://127.0.0.1:3000`;
+- The request originates from `localhost` or `127.0.0.1`.
 
-В production, preview, staging и на публичном IP обход не работает. Там `/admin` и `/api/admin/*` требуют Auth.js-сессию с ролью `ADMIN` или `MANAGER`.
+This bypass does not work in production, preview, or staging environments, nor when accessed via a public IP address. In those cases, the `/admin` and `/api/admin/*` routes require an active Auth.js session with an `ADMIN` or `MANAGER` role.
 
-## Переменные окружения
+## Environment Variables
 
-Шаблон находится в [.env.example](./.env.example). Не коммитьте `.env` и реальные ключи.
+A template is provided in [.env.example](./.env.example). Please do not commit the `.env` file or any actual secret keys to version control. In a production environment, you must set `AUTH_SECRET`, `DATABASE_URL`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_ADMIN_WHATSAPP`, and both `UPSTASH_REDIS_REST_*` variables. If Redis is unavailable in production, critical rate-limited endpoints will default to a "fail-closed" state and return a `429` status code; however, local development remains possible without Redis.
 
-В production обязательно задайте `AUTH_SECRET`, `DATABASE_URL`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_ADMIN_WHATSAPP` и оба `UPSTASH_REDIS_REST_*`. При отсутствии Redis в production критические rate-limited endpoints работают в fail-closed режиме и возвращают `429`; локальная разработка без Redis остаётся доступной.
+## PostgreSQL, Migrations, and Docker
 
-## PostgreSQL, миграции и Docker
-
-Для нового production-окружения:
+For a new production environment:
 
 ```bash
 docker compose up -d db
@@ -41,11 +39,11 @@ docker compose run --rm app npm run db:deploy
 docker compose up -d app
 ```
 
-`docker-compose.yml` получает пароль PostgreSQL из `POSTGRES_PASSWORD`, а контейнер приложения запускает только `npm run start`. Схема автоматически не изменяется при старте контейнера.
+The `docker-compose.yml` file retrieves the PostgreSQL password from the `POSTGRES_PASSWORD` variable, and the application container executes only `npm run start`. The database schema is not automatically updated when the container starts.
 
-Для существующей локальной базы, созданной через `db:push`, используйте `npm.cmd run db:push`. Для новых окружений используйте `npm run db:deploy` и миграции из `prisma/migrations`.
+For an existing local database created via `db:push`, use `npm.cmd run db:push`. For new environments, use `npm run db:deploy` along with the migrations located in `prisma/migrations`.
 
-## Проверки
+## Checks
 
 ```bash
 npm ci
@@ -55,30 +53,29 @@ npm run build
 npm audit --omit=dev
 ```
 
-Build использует безопасный placeholder `DATABASE_URL` только при генерации Prisma/Next в CI. Для runtime настоящая база всё равно обязательна.
+During the build process, a placeholder `DATABASE_URL` is used solely for Prisma/Next generation within the CI pipeline. A valid, functional database is still required for runtime.
 
-## Безопасность
+## Security
 
-- Все запросы к базе выполняются через Prisma ORM.
-- Вход, поиск, заказ, gift hint и административные операции ограничены rate limit.
-- В production отсутствие Upstash Redis блокирует критические запросы, а не отключает защиту.
-- Загрузки принимают только JPG, PNG, GIF и WebP, проверяют сигнатуру файла, размер и генерируют UUID-имя. SVG запрещён.
-- Валидация входных данных выполняется через Zod.
-- Промокоды списываются атомарно; `maxUses` нельзя превысить параллельными заказами.
-- Цена и остаток заказа берутся из базы; списание остатков происходит в транзакции.
-- Заказы и gift hint не имеют публичного endpoint просмотра.
+- All database queries are performed via the Prisma ORM.
+- Login, search, ordering, gift hints, and administrative operations are subject to rate limiting.
+- In production, the absence of Upstash Redis results in the blocking of critical requests rather than the disabling of security protections.
+- File uploads are restricted to JPG, PNG, GIF, and WebP formats; the system verifies file signatures and sizes, and assigns a UUID-based filename. SVG files are prohibited.
+- Input data is validated using Zod.
+- Promo code usage is handled atomically, ensuring that the `maxUses` limit cannot be exceeded through concurrent orders. - Order prices and remaining stock levels are retrieved from the database; stock deductions are processed within a transaction.
+- There are no public endpoints for viewing orders or "gift hints."
 
-## Где менять код
+## Where to modify the code
 
-- Главная: `src/app/page.tsx`.
-- Каталог: `src/app/catalog/page.tsx`.
-- Русский/казахский текст: `src/lib/i18n-messages.ts`.
-- Шапка: `src/components/site-header.tsx`.
-- Корзина и WhatsApp: `src/components/cart-drawer.tsx`, `src/app/checkout/page.tsx`, `src/lib/whatsapp.ts`.
-- Админские товары и категории: `src/app/admin/products/product-manager.tsx`.
-- Prisma-схема: `prisma/schema.prisma`.
-- Seed: `prisma/seed.ts`.
+- Home page: `src/app/page.tsx`.
+- Catalog: `src/app/catalog/page.tsx`.
+- Russian/Kazakh text: `src/lib/i18n-messages.ts`.
+- Header: `src/components/site-header.tsx`.
+- Cart and WhatsApp: `src/components/cart-drawer.tsx`, `src/app/checkout/page.tsx`, `src/lib/whatsapp.ts`.
+- Admin products and categories: `src/app/admin/products/product-manager.tsx`.
+- Prisma schema: `prisma/schema.prisma`.
+- Seed script: `prisma/seed.ts`.
 
-## Git и секреты
+## Git and secrets
 
-`.env`, ключи, сертификаты, логи, backup-файлы и локальные базы включены в `.gitignore`. История Git не переписывалась. Старые коммиты могут содержать небезопасные значения по умолчанию — если они использовались где-либо кроме локальной разработки, замените соответствующие PostgreSQL и seed-пароли.
+Files such as `.env`, keys, certificates, logs, backups, and local databases are included in `.gitignore`. The Git history has not been rewritten. Older commits may contain insecure default values—if these were ever used outside of a local development environment, please update the corresponding PostgreSQL and seed passwords.
