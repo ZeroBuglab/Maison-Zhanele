@@ -11,5 +11,6 @@ RUN npm run build
 
 EXPOSE 3000
 
-# For a first local container run, synchronize the Prisma schema before starting Next.js.
+# Apply Prisma migrations separately before starting the production container:
+# docker compose run --rm app npm run db:deploy
 CMD ["npm", "run", "start"]

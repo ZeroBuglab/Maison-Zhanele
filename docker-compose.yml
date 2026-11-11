@@ -3,9 +3,9 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: maison_zhanele
-      POSTGRES_USER: maison
-      POSTGRES_PASSWORD: maison_local_change_me
+      POSTGRES_DB: ${POSTGRES_DB:-maison_zhanele}
+      POSTGRES_USER: ${POSTGRES_USER:-maison}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     ports:
       - "5433:5432"
     volumes:
@@ -26,14 +26,15 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://maison:maison_local_change_me@db:5432/maison_zhanele?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-maison}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-maison_zhanele}?schema=public
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env before starting Docker}
+      AUTH_TRUST_HOST: ${AUTH_TRUST_HOST:-true}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}
       UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-}
       NEXT_PUBLIC_FREE_SHIPPING_THRESHOLD: ${NEXT_PUBLIC_FREE_SHIPPING_THRESHOLD:-30000}
-      NEXT_PUBLIC_ADMIN_WHATSAPP: ${NEXT_PUBLIC_ADMIN_WHATSAPP:-77758330223}
-      NEXT_PUBLIC_INSTAGRAM_URL: ${NEXT_PUBLIC_INSTAGRAM_URL:-https://www.instagram.com/maison_zhanele/}
+      NEXT_PUBLIC_ADMIN_WHATSAPP: ${NEXT_PUBLIC_ADMIN_WHATSAPP:-}
+      NEXT_PUBLIC_INSTAGRAM_URL: ${NEXT_PUBLIC_INSTAGRAM_URL:-https://www.instagram.com/}
       ADMIN_LOCAL_BYPASS: "false"
     ports:
       - "3000:3000"

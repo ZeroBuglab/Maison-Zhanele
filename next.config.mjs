@@ -2,7 +2,6 @@
 const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
-  output: 'standalone',
   images: {
     remotePatterns: [{ protocol: 'https', hostname: 'images.unsplash.com' }],
     formats: ['image/avif', 'image/webp']

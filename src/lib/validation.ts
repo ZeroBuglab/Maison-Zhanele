@@ -1,10 +1,7 @@
 import { z } from 'zod';
 
 const safeText = (max: number) => z.string().trim().min(1).max(max);
-const imageUrl = z.union([
-  z.string().url().max(2048),
-  z.string().regex(/^\/uploads\/[a-zA-Z0-9._-]+$/).max(255)
-]);
+const imageUrl = z.union([z.string().url().max(2048), z.string().regex(/^\/uploads\/[a-zA-Z0-9._-]+$/).max(255)]);
 
 export const giftHintSchema = z.object({
   productId: z.string().cuid().nullable().optional(),
@@ -61,7 +58,7 @@ export const categorySchema = z.object({
 const promoCodeFields = z.object({
   code: z.string().trim().min(2).max(30).regex(/^[A-Za-z0-9_-]+$/).transform((value) => value.toUpperCase()),
   percent: z.number().int().min(1).max(100).nullable().optional(),
-  amount: z.number().int().min(0).nullable().optional(),
+  amount: z.number().int().positive().nullable().optional(),
   minTotal: z.number().int().min(0).default(0),
   maxUses: z.number().int().min(1).nullable().optional(),
   active: z.boolean().default(true),
@@ -69,7 +66,16 @@ const promoCodeFields = z.object({
   expiresAt: z.string().datetime().nullable().optional()
 });
 
-export const promoCodeSchema = promoCodeFields.refine((value) => Boolean(value.percent) !== Boolean(value.amount), {
-  message: 'Укажите процент или фиксированную сумму скидки'
+function validatePromoDates(value: { startsAt?: string; expiresAt?: string | null }, ctx: z.RefinementCtx) {
+  if (value.startsAt && value.expiresAt && new Date(value.expiresAt) <= new Date(value.startsAt)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['expiresAt'], message: 'Дата окончания должна быть позже даты начала' });
+}
+
+export const promoCodeSchema = promoCodeFields.superRefine((value, ctx) => {
+  if (Boolean(value.percent) === Boolean(value.amount)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['percent'], message: 'Укажите процент или фиксированную сумму скидки' });
+  validatePromoDates(value, ctx);
 });
-export const promoCodeUpdateSchema = promoCodeFields.partial();
+
+export const promoCodeUpdateSchema = promoCodeFields.partial().superRefine((value, ctx) => {
+  if (value.percent !== undefined && value.amount !== undefined && Boolean(value.percent) === Boolean(value.amount)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['percent'], message: 'Укажите только один тип скидки' });
+  validatePromoDates(value, ctx);
+});

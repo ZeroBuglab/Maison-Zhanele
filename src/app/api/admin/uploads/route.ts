@@ -3,6 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { NextResponse } from 'next/server';
 import { hasAdminAccess } from '@/lib/admin-access';
+import { enforceAdminRateLimit } from '@/lib/admin-rate-limit';
 
 export const runtime = 'nodejs';
 
@@ -16,13 +17,19 @@ function detectImageExtension(bytes: Uint8Array) {
 
 export async function POST(request: Request) {
   if (!await hasAdminAccess()) return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
+  if (!(await enforceAdminRateLimit('uploads')).success) return NextResponse.json({ error: 'Слишком много запросов' }, { status: 429 });
+  if (Number(request.headers.get('content-length') ?? 0) > 6 * 1024 * 1024) return NextResponse.json({ error: 'Слишком большой запрос' }, { status: 413 });
+
   const formData = await request.formData();
   const file = formData.get('file');
-  if (!(file instanceof File) || !file.type.startsWith('image/') || file.type === 'image/svg+xml') return NextResponse.json({ error: 'Загрузите JPG, PNG, GIF или WebP' }, { status: 400 });
+  const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+  if (!(file instanceof File) || !allowedMimeTypes.has(file.type)) return NextResponse.json({ error: 'Загрузите JPG, PNG, GIF и WebP' }, { status: 400 });
   if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: 'Максимальный размер изображения — 5 МБ' }, { status: 413 });
+
   const bytes = new Uint8Array(await file.arrayBuffer());
   const extension = detectImageExtension(bytes);
   if (!extension) return NextResponse.json({ error: 'Файл не похож на поддерживаемое изображение' }, { status: 400 });
+
   const filename = `${randomUUID()}.${extension}`;
   const directory = path.join(process.cwd(), 'public', 'uploads');
   await mkdir(directory, { recursive: true });

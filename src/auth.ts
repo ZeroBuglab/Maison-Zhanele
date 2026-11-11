@@ -7,6 +7,7 @@ import { enforceRateLimit } from '@/lib/rate-limit';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(db),
+  trustHost: process.env.AUTH_TRUST_HOST === 'true',
   session: { strategy: 'jwt', maxAge: 60 * 60 * 24 * 30 },
   cookies: { sessionToken: { name: process.env.NODE_ENV === 'production' ? '__Secure-maison.session-token' : 'maison.session-token', options: { httpOnly: true, sameSite: 'strict', path: '/', secure: process.env.NODE_ENV === 'production' } } },
   providers: [Credentials({ credentials: { email: {}, password: {} }, async authorize(credentials, request) {

@@ -1,68 +1,84 @@
 # Maison Zhanele
 
-Премиальный e-commerce каталог украшений с русским и казахским языками, мобильной версией и заказом через WhatsApp.
+Премиальный e-commerce каталог украшений на Next.js, Prisma и PostgreSQL. Клиентская часть поддерживает русский/казахский языки, мобильный интерфейс, корзину и передачу заказа в WhatsApp.
 
-## Быстрый запуск
+## Локальный запуск
 
-1. В `.env` укажите PostgreSQL и секрет Auth.js.
-2. Установите зависимости: `npm.cmd install`.
-3. Обновите схему: `npm.cmd run db:push`.
-4. При необходимости наполните демо-данными: `npm.cmd run db:seed`.
-5. Запустите сайт: `npm.cmd run dev`.
+1. Скопируйте `.env.example` в `.env` и заполните секретные значения.
+2. Установите зависимости: `npm.cmd ci`.
+3. Примените локальную схему: `npm.cmd run db:push`.
+4. Заполните демо-данные: `npm.cmd run db:seed`.
+5. Запустите приложение: `npm.cmd run dev`.
 
-Проверка: `http://localhost:3000`, здоровье базы: `http://localhost:3000/api/health`.
+В PowerShell используйте `npm.cmd`, если политика выполнения блокирует `npm.ps1`.
 
-В PowerShell используется `npm.cmd`, потому что политика Windows может блокировать `npm.ps1`.
+Seed требует непустые `SEED_ADMIN_EMAIL` и `SEED_ADMIN_PASSWORD`. Пароль не имеет значения по умолчанию, не выводится в логах и не хранится в `.env.example`.
 
-## Настройки магазина
+## Доступ к админке
 
-```env
-NEXT_PUBLIC_ADMIN_WHATSAPP="YOUR NUMBER"
-NEXT_PUBLIC_INSTAGRAM_URL="YOUR INSTAGRAM"
-```
+Парольный обход `/admin` доступен только при одновременном выполнении всех условий:
 
-Заказ из корзины открывает WhatsApp сразу с номером `+77777777` и выбранными товарами. Покупатель не заполняет аккаунт или платёжную форму.
+- `NODE_ENV=development`;
+- `ADMIN_LOCAL_BYPASS=true`;
+- `NEXT_PUBLIC_APP_URL` указывает на `http://localhost:3000` или `http://127.0.0.1:3000`;
+- запрос пришёл на `localhost` или `127.0.0.1`.
 
-`/account` удалён. В локальной разработке `/admin` открыт без логина; в production админка защищена Auth.js и ролями `ADMIN`/`MANAGER`.
+В production, preview, staging и на публичном IP обход не работает. Там `/admin` и `/api/admin/*` требуют Auth.js-сессию с ролью `ADMIN` или `MANAGER`.
 
-## Где менять тексты и функции
+## Переменные окружения
 
-- Шапка и пункты меню: `src/components/site-header.tsx`.
-- Русский/казахский текст: `src/lib/i18n-messages.ts`.
-- Переключатель языка: `src/components/language-switcher.tsx`.
-- Главная страница: `src/app/page.tsx`.
-- Каталог: `src/app/catalog/page.tsx`.
-- Онлайн-магазин Алматы: `src/app/stores/page.tsx`.
-- Корзина и заказ: `src/components/cart-drawer.tsx`, `src/app/checkout/page.tsx`, `src/lib/whatsapp.ts`.
-- Цвета и адаптивность: `src/app/globals.css`.
+Шаблон находится в [.env.example](./.env.example). Не коммитьте `.env` и реальные ключи.
 
-## Ассортимент
+В production обязательно задайте `AUTH_SECRET`, `DATABASE_URL`, `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_ADMIN_WHATSAPP` и оба `UPSTASH_REDIS_REST_*`. При отсутствии Redis в production критические rate-limited endpoints работают в fail-closed режиме и возвращают `429`; локальная разработка без Redis остаётся доступной.
 
-`/admin/products` позволяет добавлять и редактировать товары, загружать изображения, менять цены и остатки. Внутренний SKU создаётся автоматически — вводить код товара не нужно.
+## PostgreSQL, миграции и Docker
 
-В блоке «Категории каталога» можно добавлять категории и скрывать ненужные. Скрытая категория и её товары исчезают из клиентского каталога, но остаются доступными в админке.
-
-## Docker
-
-`docker-compose.yml` запускает PostgreSQL на порту `5433` и приложение на `3000`:
+Для нового production-окружения:
 
 ```bash
-docker compose up --build
+docker compose up -d db
+docker compose run --rm app npm run db:deploy
+docker compose up -d app
 ```
 
-Для нового production-окружения примените миграции отдельным контролируемым шагом: `docker compose run --rm app npm run db:deploy`. Для уже созданной локальной базы, которая была развернута через `db:push`, повторно используйте `npm.cmd run db:push` или создайте baseline migration. Сам контейнер больше не меняет схему базы при старте. Остановить: `docker compose down`.
+`docker-compose.yml` получает пароль PostgreSQL из `POSTGRES_PASSWORD`, а контейнер приложения запускает только `npm run start`. Схема автоматически не изменяется при старте контейнера.
 
-## Структура
+Для существующей локальной базы, созданной через `db:push`, используйте `npm.cmd run db:push`. Для новых окружений используйте `npm run db:deploy` и миграции из `prisma/migrations`.
 
-```text
-prisma/schema.prisma       # каталог, варианты, заказы и роли
-prisma/seed.ts              # демо-данные
-src/lib/                    # Prisma, валидация, i18n, WhatsApp, rate limit
-src/store/cart.ts           # корзина Zustand
-src/app/api/                # API товаров, категорий, gift hint и заказов
-src/app/admin/              # dashboard, товары, скидки
-src/app/catalog/            # каталог и фильтры
-src/app/product/[slug]/     # карточка товара и намёк на подарок
-src/app/checkout/           # переход в WhatsApp
-src/components/             # header, карточки, корзина, размеры
+## Проверки
+
+```bash
+npm ci
+npm run typecheck
+npm run lint
+npm run build
+npm audit --omit=dev
 ```
+
+Build использует безопасный placeholder `DATABASE_URL` только при генерации Prisma/Next в CI. Для runtime настоящая база всё равно обязательна.
+
+## Безопасность
+
+- Все запросы к базе выполняются через Prisma ORM.
+- Вход, поиск, заказ, gift hint и административные операции ограничены rate limit.
+- В production отсутствие Upstash Redis блокирует критические запросы, а не отключает защиту.
+- Загрузки принимают только JPG, PNG, GIF и WebP, проверяют сигнатуру файла, размер и генерируют UUID-имя. SVG запрещён.
+- Валидация входных данных выполняется через Zod.
+- Промокоды списываются атомарно; `maxUses` нельзя превысить параллельными заказами.
+- Цена и остаток заказа берутся из базы; списание остатков происходит в транзакции.
+- Заказы и gift hint не имеют публичного endpoint просмотра.
+
+## Где менять код
+
+- Главная: `src/app/page.tsx`.
+- Каталог: `src/app/catalog/page.tsx`.
+- Русский/казахский текст: `src/lib/i18n-messages.ts`.
+- Шапка: `src/components/site-header.tsx`.
+- Корзина и WhatsApp: `src/components/cart-drawer.tsx`, `src/app/checkout/page.tsx`, `src/lib/whatsapp.ts`.
+- Админские товары и категории: `src/app/admin/products/product-manager.tsx`.
+- Prisma-схема: `prisma/schema.prisma`.
+- Seed: `prisma/seed.ts`.
+
+## Git и секреты
+
+`.env`, ключи, сертификаты, логи, backup-файлы и локальные базы включены в `.gitignore`. История Git не переписывалась. Старые коммиты могут содержать небезопасные значения по умолчанию — если они использовались где-либо кроме локальной разработки, замените соответствующие PostgreSQL и seed-пароли.

@@ -4,11 +4,13 @@ import { productSchema } from '@/lib/validation';
 import { slugify } from '@/lib/utils';
 import { hasAdminAccess } from '@/lib/admin-access';
 import { createInternalSku } from '@/lib/product-ids';
+import { enforceAdminRateLimit } from '@/lib/admin-rate-limit';
 
 const staff = hasAdminAccess;
 
 export async function GET() {
   if (!await staff()) return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
+  if (!(await enforceAdminRateLimit('products-read')).success) return NextResponse.json({ error: 'Слишком много запросов' }, { status: 429 });
   const [products, categories] = await Promise.all([
     db.product.findMany({ include: { category: true, images: { orderBy: { sortOrder: 'asc' } }, variants: { orderBy: { price: 'asc' } } }, orderBy: { createdAt: 'desc' } }),
     db.category.findMany({ orderBy: { name: 'asc' } })
@@ -18,6 +20,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   if (!await staff()) return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
+  if (!(await enforceAdminRateLimit('products-write')).success) return NextResponse.json({ error: 'Слишком много запросов' }, { status: 429 });
   if (Number(request.headers.get('content-length') ?? 0) > 1_000_000) return NextResponse.json({ error: 'Слишком большой запрос' }, { status: 413 });
   try {
     const input = productSchema.parse(await request.json());

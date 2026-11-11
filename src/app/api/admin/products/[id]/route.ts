@@ -3,11 +3,13 @@ import { db } from '@/lib/db';
 import { productSchema } from '@/lib/validation';
 import { hasAdminAccess } from '@/lib/admin-access';
 import { createInternalSku } from '@/lib/product-ids';
+import { enforceAdminRateLimit } from '@/lib/admin-rate-limit';
 
 const canManage = hasAdminAccess;
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!await canManage()) return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
+  if (!(await enforceAdminRateLimit('products-write')).success) return NextResponse.json({ error: 'Слишком много запросов' }, { status: 429 });
   const { id } = await params;
   try {
     const input = productSchema.partial().parse(await request.json());
@@ -37,6 +39,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!await canManage()) return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
+  if (!(await enforceAdminRateLimit('products-write')).success) return NextResponse.json({ error: 'Слишком много запросов' }, { status: 429 });
   const { id } = await params;
   try { await db.product.update({ where: { id }, data: { active: false } }); return new NextResponse(null, { status: 204 }); }
   catch { return NextResponse.json({ error: 'Товар не найден' }, { status: 404 }); }

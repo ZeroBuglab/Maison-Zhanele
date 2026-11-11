@@ -13,6 +13,12 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+*.bak
+*.backup
+*.dump
+*.sqlite
+*.sqlite3
+*.db
 *.pem
 *.key
 *.crt
