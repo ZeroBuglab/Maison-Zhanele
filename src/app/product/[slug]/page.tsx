@@ -8,6 +8,8 @@ import { getLocale } from '@/lib/i18n';
 
 const demo = { id: 'demo-product', slug: 'signature-heart', name: 'Кулон «Signature Heart»', description: 'Знаковое украшение для самых важных историй. Выполнено вручную из ювелирного сплава с покрытием, которое сохраняет мягкое сияние на каждый день.', basePrice: 24900, compareAtPrice: null, images: [{ url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=1200&q=90', alt: 'Кулон Signature Heart' }, { url: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=1200&q=90', alt: 'Деталь кулона' }], variants: [{ id: 'demo-variant', sku: 'MZ-001', price: 24900, size: null, stock: 10 }] };
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const locale = await getLocale();

@@ -1,8 +1,11 @@
 import { auth } from '@/auth';
 
-/** Local admin UX is intentionally passwordless. Production still requires an ADMIN/MANAGER session. */
+/** Passwordless admin is available only when explicitly enabled for localhost development. */
 export async function hasAdminAccess() {
-  if (process.env.NODE_ENV !== 'production') return true;
+  const localBypass = process.env.NODE_ENV === 'development'
+    && process.env.ADMIN_LOCAL_BYPASS === 'true'
+    && /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(process.env.NEXT_PUBLIC_APP_URL ?? '');
+  if (localBypass) return true;
   const session = await auth();
   return Boolean(session?.user && ['ADMIN', 'MANAGER'].includes(session.user.role));
 }

@@ -12,6 +12,8 @@ const fallback: ProductCardData[] = [
   { id: '4', slug: 'moment-charm', name: 'Шарм «New Moment»', basePrice: 12900, compareAtPrice: null, images: [{ url: 'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=900&q=85', alt: 'Шарм' }], variants: [{ id: 'demo-4', sku: 'MZ-004', price: 12900, size: null }] }
 ];
 
+export const dynamic = 'force-dynamic';
+
 export default async function CatalogPage({ searchParams }: { searchParams: Promise<{ q?: string; category?: string; collection?: string; outlet?: string }> }) {
   const params = await searchParams;
   const locale = await getLocale();

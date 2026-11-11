@@ -3,15 +3,22 @@ import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
+import { enforceRateLimit } from '@/lib/rate-limit';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(db),
   session: { strategy: 'jwt', maxAge: 60 * 60 * 24 * 30 },
   cookies: { sessionToken: { name: process.env.NODE_ENV === 'production' ? '__Secure-maison.session-token' : 'maison.session-token', options: { httpOnly: true, sameSite: 'strict', path: '/', secure: process.env.NODE_ENV === 'production' } } },
-  providers: [Credentials({ credentials: { email: {}, password: {} }, async authorize(credentials) {
+  providers: [Credentials({ credentials: { email: {}, password: {} }, async authorize(credentials, request) {
     const email = String(credentials?.email ?? '').toLowerCase().trim();
     const password = String(credentials?.password ?? '');
     if (!email || !password) return null;
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip') ?? 'unknown';
+    const [ipRate, accountRate] = await Promise.all([
+      enforceRateLimit('auth-ip', ip, 30, '10 m'),
+      enforceRateLimit('auth-account', `${ip}:${email}`, 10, '10 m')
+    ]);
+    if (!ipRate.success || !accountRate.success) return null;
     const user = await db.user.findUnique({ where: { email } });
     if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) return null;
     return { id: user.id, email: user.email, name: user.name, role: user.role };

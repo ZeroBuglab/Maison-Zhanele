@@ -4,7 +4,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY package*.json ./
-RUN npm install --include=dev
+RUN npm ci --include=dev
 
 COPY . .
 RUN npm run build
@@ -12,4 +12,4 @@ RUN npm run build
 EXPOSE 3000
 
 # For a first local container run, synchronize the Prisma schema before starting Next.js.
-CMD ["sh", "-c", "npm run db:push && npm run start"]
+CMD ["npm", "run", "start"]

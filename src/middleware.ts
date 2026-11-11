@@ -4,7 +4,10 @@ import { getToken } from 'next-auth/jwt';
 export default async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   if (path.startsWith('/admin')) {
-    if (process.env.NODE_ENV !== 'production') return NextResponse.next();
+    const localBypass = process.env.NODE_ENV === 'development'
+      && process.env.ADMIN_LOCAL_BYPASS === 'true'
+      && ['localhost', '127.0.0.1'].includes(request.nextUrl.hostname);
+    if (localBypass) return NextResponse.next();
     const token = await getToken({ req: request, secret: process.env.AUTH_SECRET, cookieName: process.env.NODE_ENV === 'production' ? '__Secure-maison.session-token' : 'maison.session-token' });
     const role = token?.role;
     if (!token) return NextResponse.redirect(new URL('/login?callbackUrl=/admin', request.url));

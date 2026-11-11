@@ -1,0 +1,66 @@
+-- Initial schema for Maison Zhanele.
+CREATE SCHEMA IF NOT EXISTS "public";
+
+CREATE TYPE "Role" AS ENUM ('USER', 'MANAGER', 'ADMIN');
+CREATE TYPE "OrderStatus" AS ENUM ('NEW', 'AWAITING_PAYMENT', 'PROCESSING', 'PAID', 'SHIPPED', 'COMPLETED', 'CANCELLED');
+CREATE TYPE "PaymentMethod" AS ENUM ('MANUAL_KASPI', 'KASPI_QR', 'KASPI_RED', 'CARD');
+CREATE TYPE "PaymentStatus" AS ENUM ('PENDING', 'PAID', 'FAILED', 'REFUNDED');
+CREATE TYPE "ShippingStatus" AS ENUM ('PENDING', 'PACKED', 'SHIPPED', 'DELIVERED');
+CREATE TYPE "Metal" AS ENUM ('SILVER', 'GOLD', 'ROSE_GOLD');
+CREATE TYPE "BraceletType" AS ENUM ('BANGLE', 'CHARM', 'CHAIN', 'LEATHER');
+CREATE TYPE "PackagingType" AS ENUM ('FREE', 'PREMIUM');
+
+CREATE TABLE "User" ("id" TEXT NOT NULL, "name" TEXT, "email" TEXT, "passwordHash" TEXT, "role" "Role" NOT NULL DEFAULT 'USER', "image" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "User_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Account" ("userId" TEXT NOT NULL, "type" TEXT NOT NULL, "provider" TEXT NOT NULL, "providerAccountId" TEXT NOT NULL, "refresh_token" TEXT, "access_token" TEXT, "expires_at" INTEGER, "token_type" TEXT, "scope" TEXT, "id_token" TEXT, "session_state" TEXT, CONSTRAINT "Account_pkey" PRIMARY KEY ("provider","providerAccountId"));
+CREATE TABLE "Session" ("sessionToken" TEXT NOT NULL, "userId" TEXT NOT NULL, "expires" TIMESTAMP(3) NOT NULL);
+CREATE TABLE "VerificationToken" ("identifier" TEXT NOT NULL, "token" TEXT NOT NULL, "expires" TIMESTAMP(3) NOT NULL);
+CREATE TABLE "Category" ("id" TEXT NOT NULL, "name" TEXT NOT NULL, "slug" TEXT NOT NULL, "parentId" TEXT, "active" BOOLEAN NOT NULL DEFAULT true, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "Category_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Collection" ("id" TEXT NOT NULL, "name" TEXT NOT NULL, "slug" TEXT NOT NULL, CONSTRAINT "Collection_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Product" ("id" TEXT NOT NULL, "sku" TEXT NOT NULL, "name" TEXT NOT NULL, "slug" TEXT NOT NULL, "description" TEXT NOT NULL, "basePrice" INTEGER NOT NULL, "compareAtPrice" INTEGER, "categoryId" TEXT NOT NULL, "collectionId" TEXT, "active" BOOLEAN NOT NULL DEFAULT true, "featured" BOOLEAN NOT NULL DEFAULT false, "braceletType" "BraceletType", "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "Product_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "ProductVariant" ("id" TEXT NOT NULL, "sku" TEXT NOT NULL, "productId" TEXT NOT NULL, "size" TEXT, "color" TEXT, "metal" "Metal", "price" INTEGER NOT NULL, "compareAtPrice" INTEGER, "stock" INTEGER NOT NULL DEFAULT 0, "active" BOOLEAN NOT NULL DEFAULT true, CONSTRAINT "ProductVariant_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "ProductImage" ("id" TEXT NOT NULL, "productId" TEXT NOT NULL, "url" TEXT NOT NULL, "alt" TEXT NOT NULL, "sortOrder" INTEGER NOT NULL DEFAULT 0, CONSTRAINT "ProductImage_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Favorite" ("userId" TEXT NOT NULL, "productId" TEXT NOT NULL, CONSTRAINT "Favorite_pkey" PRIMARY KEY ("userId","productId"));
+CREATE TABLE "Cart" ("id" TEXT NOT NULL, "userId" TEXT, "sessionId" TEXT, "packaging" "PackagingType" NOT NULL DEFAULT 'FREE', "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "Cart_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "CartItem" ("id" TEXT NOT NULL, "cartId" TEXT NOT NULL, "variantId" TEXT NOT NULL, "quantity" INTEGER NOT NULL, CONSTRAINT "CartItem_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Order" ("id" TEXT NOT NULL, "number" TEXT NOT NULL, "userId" TEXT, "email" TEXT NOT NULL, "phone" TEXT NOT NULL, "customerName" TEXT NOT NULL, "address" TEXT NOT NULL, "status" "OrderStatus" NOT NULL DEFAULT 'NEW', "paymentStatus" "PaymentStatus" NOT NULL DEFAULT 'PENDING', "shippingStatus" "ShippingStatus" NOT NULL DEFAULT 'PENDING', "paymentMethod" "PaymentMethod" NOT NULL, "subtotal" INTEGER NOT NULL, "shipping" INTEGER NOT NULL, "packaging" INTEGER NOT NULL, "discount" INTEGER NOT NULL DEFAULT 0, "total" INTEGER NOT NULL, "promoCode" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "Order_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "OrderItem" ("id" TEXT NOT NULL, "orderId" TEXT NOT NULL, "variantId" TEXT NOT NULL, "name" TEXT NOT NULL, "sku" TEXT NOT NULL, "price" INTEGER NOT NULL, "quantity" INTEGER NOT NULL, CONSTRAINT "OrderItem_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "PromoCode" ("id" TEXT NOT NULL, "code" TEXT NOT NULL, "percent" INTEGER, "amount" INTEGER, "minTotal" INTEGER NOT NULL DEFAULT 0, "maxUses" INTEGER, "usedCount" INTEGER NOT NULL DEFAULT 0, "active" BOOLEAN NOT NULL DEFAULT true, "startsAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "expiresAt" TIMESTAMP(3), CONSTRAINT "PromoCode_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "Banner" ("id" TEXT NOT NULL, "title" TEXT NOT NULL, "subtitle" TEXT, "imageUrl" TEXT NOT NULL, "href" TEXT, "active" BOOLEAN NOT NULL DEFAULT true, "sortOrder" INTEGER NOT NULL DEFAULT 0, CONSTRAINT "Banner_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "GiftHint" ("id" TEXT NOT NULL, "productId" TEXT, "senderName" TEXT, "senderPhone" TEXT, "recipientName" TEXT, "recipientContact" TEXT NOT NULL, "message" TEXT NOT NULL, "token" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "GiftHint_pkey" PRIMARY KEY ("id"));
+
+CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+CREATE UNIQUE INDEX "Session_sessionToken_key" ON "Session"("sessionToken");
+CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token");
+CREATE UNIQUE INDEX "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier","token");
+CREATE UNIQUE INDEX "Category_slug_key" ON "Category"("slug");
+CREATE UNIQUE INDEX "Collection_slug_key" ON "Collection"("slug");
+CREATE UNIQUE INDEX "Product_sku_key" ON "Product"("sku");
+CREATE UNIQUE INDEX "Product_slug_key" ON "Product"("slug");
+CREATE INDEX "Product_categoryId_active_idx" ON "Product"("categoryId","active");
+CREATE INDEX "Product_name_idx" ON "Product"("name");
+CREATE UNIQUE INDEX "ProductVariant_sku_key" ON "ProductVariant"("sku");
+CREATE INDEX "ProductVariant_productId_active_idx" ON "ProductVariant"("productId","active");
+CREATE UNIQUE INDEX "Cart_sessionId_key" ON "Cart"("sessionId");
+CREATE UNIQUE INDEX "Cart_userId_key" ON "Cart"("userId");
+CREATE UNIQUE INDEX "CartItem_cartId_variantId_key" ON "CartItem"("cartId","variantId");
+CREATE UNIQUE INDEX "Order_number_key" ON "Order"("number");
+CREATE INDEX "Order_status_createdAt_idx" ON "Order"("status","createdAt");
+CREATE UNIQUE INDEX "PromoCode_code_key" ON "PromoCode"("code");
+CREATE UNIQUE INDEX "GiftHint_token_key" ON "GiftHint"("token");
+
+ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Category" ADD CONSTRAINT "Category_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Product" ADD CONSTRAINT "Product_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Product" ADD CONSTRAINT "Product_collectionId_fkey" FOREIGN KEY ("collectionId") REFERENCES "Collection"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ProductVariant" ADD CONSTRAINT "ProductVariant_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ProductImage" ADD CONSTRAINT "ProductImage_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Favorite" ADD CONSTRAINT "Favorite_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Favorite" ADD CONSTRAINT "Favorite_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Cart" ADD CONSTRAINT "Cart_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "CartItem" ADD CONSTRAINT "CartItem_cartId_fkey" FOREIGN KEY ("cartId") REFERENCES "Cart"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "CartItem" ADD CONSTRAINT "CartItem_variantId_fkey" FOREIGN KEY ("variantId") REFERENCES "ProductVariant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Order" ADD CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_variantId_fkey" FOREIGN KEY ("variantId") REFERENCES "ProductVariant"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "GiftHint" ADD CONSTRAINT "GiftHint_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -50,7 +50,7 @@ NEXT_PUBLIC_INSTAGRAM_URL="YOUR INSTAGRAM"
 docker compose up --build
 ```
 
-Остановить: `docker compose down`.
+Для нового production-окружения примените миграции отдельным контролируемым шагом: `docker compose run --rm app npm run db:deploy`. Для уже созданной локальной базы, которая была развернута через `db:push`, повторно используйте `npm.cmd run db:push` или создайте baseline migration. Сам контейнер больше не меняет схему базы при старте. Остановить: `docker compose down`.
 
 ## Структура
 
