@@ -1,0 +1,9 @@
+'use client';
+import { useState } from 'react';
+import { Ruler } from 'lucide-react';
+import { useCart } from '@/store/cart';
+import { formatPrice } from '@/lib/utils';
+import { SizeGuideModal } from './size-guide-modal';
+import { useLanguage } from '@/components/language-provider';
+
+export function ProductBuyBox({ product }: { product: { id: string; name: string; image: string; variants: { id: string; sku: string; price: number; size?: string | null; stock: number }[] } }) { const [selected, setSelected] = useState(product.variants[0]); const [guide, setGuide] = useState(false); const add = useCart((s) => s.add); const { t } = useLanguage(); return <div className="mt-7"><div className="flex items-center justify-between text-xs uppercase tracking-[.12em]"><span>{selected?.size ? t('size') : t('variant')}</span><button onClick={() => setGuide(true)} className="flex items-center gap-2 underline underline-offset-4"><Ruler size={14} /> {t('sizeGuide')}</button></div><div className="mt-3 flex flex-wrap gap-2">{product.variants.map((variant) => <button key={variant.id} disabled={variant.stock < 1} onClick={() => setSelected(variant)} className={`min-w-14 border px-4 py-3 text-sm ${selected?.id === variant.id ? 'border-ink bg-ink text-white' : 'border-line'} disabled:cursor-not-allowed disabled:opacity-30`}>{variant.size ?? formatPrice(variant.price)}</button>)}</div><button disabled={!selected || selected.stock < 1} onClick={() => selected && add({ variantId: selected.id, productId: product.id, name: product.name, sku: selected.sku, price: selected.price, image: product.image, size: selected.size })} className="mt-6 w-full bg-ink py-4 text-xs uppercase tracking-[.18em] text-white transition hover:bg-rose disabled:opacity-40">{t('addToCart')}</button><SizeGuideModal open={guide} onClose={() => setGuide(false)} /></div>; }

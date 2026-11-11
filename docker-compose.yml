@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: maison_zhanele
+      POSTGRES_USER: maison
+      POSTGRES_PASSWORD: maison_local_change_me
+    ports:
+      - "5433:5432"
+    volumes:
+      - maison_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maison -d maison_zhanele"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://maison:maison_local_change_me@db:5432/maison_zhanele?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env before starting Docker}
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-}
+      NEXT_PUBLIC_FREE_SHIPPING_THRESHOLD: ${NEXT_PUBLIC_FREE_SHIPPING_THRESHOLD:-30000}
+    ports:
+      - "3000:3000"
+
+volumes:
+  maison_postgres_data:
