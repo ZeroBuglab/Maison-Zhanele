@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
+import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 import { hasAdminAccess } from '@/lib/admin-access';
 import { enforceAdminRateLimit } from '@/lib/admin-rate-limit';
@@ -18,21 +17,26 @@ function detectImageExtension(bytes: Uint8Array) {
 export async function POST(request: Request) {
   if (!await hasAdminAccess()) return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
   if (!(await enforceAdminRateLimit('uploads')).success) return NextResponse.json({ error: 'Слишком много запросов' }, { status: 429 });
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return NextResponse.json({ error: 'Хранилище изображений не настроено' }, { status: 503 });
   if (Number(request.headers.get('content-length') ?? 0) > 6 * 1024 * 1024) return NextResponse.json({ error: 'Слишком большой запрос' }, { status: 413 });
 
-  const formData = await request.formData();
-  const file = formData.get('file');
-  const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
-  if (!(file instanceof File) || !allowedMimeTypes.has(file.type)) return NextResponse.json({ error: 'Загрузите JPG, PNG, GIF и WebP' }, { status: 400 });
-  if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: 'Максимальный размер изображения — 5 МБ' }, { status: 413 });
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file');
+    const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+    if (!(file instanceof File) || !allowedMimeTypes.has(file.type)) return NextResponse.json({ error: 'Загрузите JPG, PNG, GIF и WebP' }, { status: 400 });
+    if (file.size > 5 * 1024 * 1024) return NextResponse.json({ error: 'Максимальный размер изображения — 5 МБ' }, { status: 413 });
 
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const extension = detectImageExtension(bytes);
-  if (!extension) return NextResponse.json({ error: 'Файл не похож на поддерживаемое изображение' }, { status: 400 });
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const extension = detectImageExtension(bytes);
+    if (!extension) return NextResponse.json({ error: 'Файл не похож на поддерживаемое изображение' }, { status: 400 });
 
-  const filename = `${randomUUID()}.${extension}`;
-  const directory = path.join(process.cwd(), 'public', 'uploads');
-  await mkdir(directory, { recursive: true });
-  await writeFile(path.join(directory, filename), Buffer.from(bytes));
-  return NextResponse.json({ url: `/uploads/${filename}` }, { status: 201 });
+    const blob = await put(`products/${randomUUID()}.${extension}`, Buffer.from(bytes), {
+      access: 'public',
+      contentType: file.type
+    });
+    return NextResponse.json({ url: blob.url }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: 'Не удалось сохранить изображение' }, { status: 502 });
+  }
 }
