@@ -30,9 +30,11 @@ npm run db:deploy
 npm run db:seed
 ```
 
-Every Vercel deployment also runs `prisma migrate deploy` before Next.js is built.
-This applies committed migrations to the configured Neon database and prevents a
-deployment from starting when its required tables have not been created.
+Every Production Vercel deployment runs `prisma migrate deploy` before Next.js is built.
+If both `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` are set, it then runs the
+idempotent seed: this creates or updates the administrator, catalog categories,
+and the initial catalog product. Changing `SEED_ADMIN_PASSWORD` and deploying
+again safely resets that administrator's password.
 
 Open `https://your-domain.example/admin` and enter the email and password configured above. The application does not display these credentials, and the seed command never prints the password. If the production database was already seeded, run the seed again after changing these variables to update the administrator password.
 
