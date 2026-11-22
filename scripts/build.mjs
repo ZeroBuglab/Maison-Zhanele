@@ -12,11 +12,14 @@ const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 // and must never be used for migrations.
 const steps = [
   ['exec', 'prisma', 'generate'],
-  ...(process.env.DATABASE_URL ? [['exec', 'prisma', 'migrate', 'deploy']] : []),
+  ...(process.env.DATABASE_URL
+    ? [['exec', 'prisma', 'migrate', 'deploy']]
+    : []),
   ['exec', 'next', 'build']
 ];
 
 for (const args of steps) {
+  if (args.includes('migrate')) console.log('[build] Applying Prisma migrations to Neon...');
   const command = process.platform === 'win32' ? (process.env.ComSpec || 'cmd.exe') : npm;
   const commandArgs = process.platform === 'win32' ? ['/d', '/s', '/c', `${npm} ${args.join(' ')}`] : args;
   const result = spawnSync(command, commandArgs, { stdio: 'inherit', env });
