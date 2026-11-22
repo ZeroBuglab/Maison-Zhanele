@@ -10,8 +10,7 @@ const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 // migrations before compiling, so a successful deployment cannot start without
 // the tables expected by the Prisma client. The placeholder URL is build-only
 // and must never be used for migrations.
-const shouldSeedProduction = process.env.VERCEL_ENV === 'production'
-  && Boolean(process.env.SEED_ADMIN_EMAIL?.trim())
+const shouldSeedInitialData = Boolean(process.env.SEED_ADMIN_EMAIL?.trim())
   && Boolean(process.env.SEED_ADMIN_PASSWORD);
 
 const steps = [
@@ -19,7 +18,7 @@ const steps = [
   ...(process.env.DATABASE_URL
     ? [['exec', 'prisma', 'migrate', 'deploy']]
     : []),
-  ...(shouldSeedProduction ? [['run', 'db:seed']] : []),
+  ...(shouldSeedInitialData ? [['run', 'db:seed']] : []),
   ['exec', 'next', 'build']
 ];
 
