@@ -17,5 +17,5 @@ export async function GET(request: NextRequest) {
     db.product.findMany({ where, include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 }, variants: { where: { active: true }, orderBy: { price: 'asc' }, take: 1 }, category: true }, orderBy: { createdAt: 'desc' }, skip: (page - 1) * take, take }),
     db.product.count({ where })
   ]);
-  return NextResponse.json({ items, total, page, pages: Math.ceil(total / take) }, { headers: { 'Cache-Control': 'private, max-age=30' } });
+  return NextResponse.json({ items, total, page, pages: Math.ceil(total / take) }, { headers: { 'Cache-Control': 'no-store' } });
 }

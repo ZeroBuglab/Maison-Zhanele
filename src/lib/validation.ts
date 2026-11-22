@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 const safeText = (max: number) => z.string().trim().min(1).max(max);
-const imageUrl = z.union([z.string().url().max(2048), z.string().regex(/^\/uploads\/[a-zA-Z0-9._-]+$/).max(255)]);
+// Vercel is immutable at runtime: product images must always be durable Blob URLs.
+const imageUrl = z.string().url().refine((value) => value.startsWith('https://'), 'Изображение должно быть публичным HTTPS URL');
 
 export const giftHintSchema = z.object({
   productId: z.string().cuid().nullable().optional(),

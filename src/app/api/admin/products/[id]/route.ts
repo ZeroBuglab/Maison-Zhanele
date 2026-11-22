@@ -4,6 +4,7 @@ import { productSchema } from '@/lib/validation';
 import { hasAdminAccess } from '@/lib/admin-access';
 import { createInternalSku } from '@/lib/product-ids';
 import { enforceAdminRateLimit } from '@/lib/admin-rate-limit';
+import { revalidatePath } from 'next/cache';
 
 const canManage = hasAdminAccess;
 
@@ -30,6 +31,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       if (input.basePrice !== undefined || input.compareAtPrice !== undefined) await tx.productVariant.updateMany({ where: { productId: id }, data: { ...(input.basePrice !== undefined ? { price: input.basePrice } : {}), ...(input.compareAtPrice !== undefined ? { compareAtPrice: input.compareAtPrice } : {}) } });
       return tx.product.update({ where: { id }, data: { name: input.name, description: input.description, basePrice: input.basePrice, compareAtPrice: input.compareAtPrice, categoryId: input.categoryId, collectionId: input.collectionId, active: input.active, featured: input.featured, ...(input.imageUrls ? { images: { create: input.imageUrls.map((url, sortOrder) => ({ url, alt: input.name ?? 'Product', sortOrder })) } } : {}), ...(input.variants ? { variants: { create: input.variants.map((variant, index) => ({ ...variant, sku: variant.sku ?? createInternalSku('MZV'), size: variant.size ?? null, color: variant.color ?? null })) } } : {}) } });
     });
+    revalidatePath('/'); revalidatePath('/catalog'); revalidatePath('/admin');
+    revalidatePath(`/product/${updated.slug}`);
     return NextResponse.json({ id: updated.id });
   } catch (error) {
     const message = error instanceof Error && error.message === 'VARIANTS_LOCKED' ? 'Нельзя заменить варианты: по товару уже есть оформленные заказы' : error instanceof Error && error.message === 'PRODUCT_NOT_FOUND' ? 'Товар не найден' : 'Данные товара некорректны';
@@ -41,6 +44,10 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (!await canManage()) return NextResponse.json({ error: 'Недостаточно прав' }, { status: 403 });
   if (!(await enforceAdminRateLimit('products-write')).success) return NextResponse.json({ error: 'Слишком много запросов' }, { status: 429 });
   const { id } = await params;
-  try { await db.product.update({ where: { id }, data: { active: false } }); return new NextResponse(null, { status: 204 }); }
+  try {
+    const product = await db.product.update({ where: { id }, data: { active: false }, select: { slug: true } });
+    revalidatePath('/'); revalidatePath('/catalog'); revalidatePath('/admin'); revalidatePath(`/product/${product.slug}`);
+    return new NextResponse(null, { status: 204 });
+  }
   catch { return NextResponse.json({ error: 'Товар не найден' }, { status: 404 }); }
 }

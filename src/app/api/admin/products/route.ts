@@ -5,6 +5,7 @@ import { slugify } from '@/lib/utils';
 import { hasAdminAccess } from '@/lib/admin-access';
 import { createInternalSku } from '@/lib/product-ids';
 import { enforceAdminRateLimit } from '@/lib/admin-rate-limit';
+import { revalidatePath } from 'next/cache';
 
 const staff = hasAdminAccess;
 
@@ -15,7 +16,7 @@ export async function GET() {
     db.product.findMany({ include: { category: true, images: { orderBy: { sortOrder: 'asc' } }, variants: { orderBy: { price: 'asc' } } }, orderBy: { createdAt: 'desc' } }),
     db.category.findMany({ orderBy: { name: 'asc' } })
   ]);
-  return NextResponse.json({ products, categories });
+  return NextResponse.json({ products, categories }, { headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function POST(request: Request) {
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
     if (input.collectionId && !collection) return NextResponse.json({ error: 'Коллекция не найдена' }, { status: 400 });
     const sku = input.sku ?? createInternalSku();
     const product = await db.product.create({ data: { name: input.name, sku, slug: `${slugify(input.name)}-${sku.toLowerCase()}`, description: input.description, basePrice: input.basePrice, compareAtPrice: input.compareAtPrice, categoryId: input.categoryId, collectionId: input.collectionId, active: input.active, featured: input.featured, images: { create: input.imageUrls.map((url, sortOrder) => ({ url, alt: input.name, sortOrder })) }, variants: { create: input.variants.map((variant, index) => ({ ...variant, sku: variant.sku ?? `${sku}-${index + 1}`, size: variant.size ?? null, color: variant.color ?? null })) } } });
+    revalidatePath('/'); revalidatePath('/catalog'); revalidatePath('/admin'); revalidatePath(`/product/${product.slug}`);
     return NextResponse.json({ id: product.id }, { status: 201 });
   } catch { return NextResponse.json({ error: 'Некорректные данные товара или такой код уже существует' }, { status: 400 }); }
 }

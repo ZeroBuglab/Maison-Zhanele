@@ -5,19 +5,10 @@ import { db } from '@/lib/db';
 import { ProductCard } from '@/components/product-card';
 import { getLocale } from '@/lib/i18n';
 
-const fallback = [
-  { id: '1', slug: 'signature-heart', name: 'Кулон «Signature Heart»', basePrice: 24900, compareAtPrice: null, images: [{ url: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=900&q=85', alt: 'Кулон' }], variants: [{ id: 'demo-1', sku: 'MZ-001', price: 24900, size: null }] },
-  { id: '2', slug: 'rose-tennis', name: 'Браслет Rose Tennis', basePrice: 38900, compareAtPrice: null, images: [{ url: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=900&q=85', alt: 'Браслет' }], variants: [{ id: 'demo-2', sku: 'MZ-002', price: 38900, size: '17' }] },
-  { id: '3', slug: 'elevated-ring', name: 'Кольцо Elevated', basePrice: 17900, compareAtPrice: 21900, images: [{ url: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=900&q=85', alt: 'Кольцо' }], variants: [{ id: 'demo-3', sku: 'MZ-003', price: 17900, size: '17' }] },
-  { id: '4', slug: 'moment-charm', name: 'Шарм «New Moment»', basePrice: 12900, compareAtPrice: null, images: [{ url: 'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=900&q=85', alt: 'Шарм' }], variants: [{ id: 'demo-4', sku: 'MZ-004', price: 12900, size: null }] }
-];
-
 export const dynamic = 'force-dynamic';
 
 async function featuredProducts() {
-  try {
-    return await db.product.findMany({ where: { active: true, featured: true, category: { active: true } }, include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 }, variants: { where: { active: true }, orderBy: { price: 'asc' }, take: 1 } }, take: 4 });
-  } catch { return fallback; }
+  return db.product.findMany({ where: { active: true, featured: true, category: { active: true } }, include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 }, variants: { where: { active: true }, orderBy: { price: 'asc' }, take: 1 } }, take: 4 });
 }
 
 export default async function Home() {

@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function AdminPage() {
   const session = await auth();
   const [products, orders, aggregate, recentOrders] = await Promise.all([
-    db.product.findMany({ where: { active: true }, include: { category: true, variants: true }, orderBy: { createdAt: 'desc' }, take: 50 }),
+    db.product.findMany({ include: { category: true, variants: true }, orderBy: { createdAt: 'desc' }, take: 50 }),
     db.order.count(),
     db.order.aggregate({ _sum: { total: true }, _avg: { total: true } }),
     db.order.findMany({ orderBy: { createdAt: 'desc' }, take: 10, include: { items: true } })
