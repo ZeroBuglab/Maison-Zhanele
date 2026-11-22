@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/build.mjs",
+    "vercel-build": "node scripts/build.mjs",
     "start": "next start",
     "lint": "eslint . --max-warnings=0 --ignore-pattern .next --ignore-pattern node_modules",
     "typecheck": "tsc --noEmit",
