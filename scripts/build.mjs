@@ -6,7 +6,17 @@ const env = {
 };
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
-for (const args of [['exec', 'prisma', 'generate'], ['exec', 'next', 'build']]) {
+// Vercel runs this script with the real Neon DATABASE_URL. Apply only committed
+// migrations before compiling, so a successful deployment cannot start without
+// the tables expected by the Prisma client. The placeholder URL is build-only
+// and must never be used for migrations.
+const steps = [
+  ['exec', 'prisma', 'generate'],
+  ...(process.env.DATABASE_URL ? [['exec', 'prisma', 'migrate', 'deploy']] : []),
+  ['exec', 'next', 'build']
+];
+
+for (const args of steps) {
   const command = process.platform === 'win32' ? (process.env.ComSpec || 'cmd.exe') : npm;
   const commandArgs = process.platform === 'win32' ? ['/d', '/s', '/c', `${npm} ${args.join(' ')}`] : args;
   const result = spawnSync(command, commandArgs, { stdio: 'inherit', env });

@@ -30,6 +30,10 @@ npm run db:deploy
 npm run db:seed
 ```
 
+Every Vercel deployment also runs `prisma migrate deploy` before Next.js is built.
+This applies committed migrations to the configured Neon database and prevents a
+deployment from starting when its required tables have not been created.
+
 Open `https://your-domain.example/admin` and enter the email and password configured above. The application does not display these credentials, and the seed command never prints the password. If the production database was already seeded, run the seed again after changing these variables to update the administrator password.
 
 Bypassing the password requirement for the `/admin` route is only possible when all of the following conditions are met:
@@ -72,7 +76,7 @@ npm run build
 npm audit --omit=dev
 ```
 
-During the build process, a placeholder `DATABASE_URL` is used solely for Prisma/Next generation within the CI pipeline. A valid, functional database is still required for runtime.
+During builds without a configured database, a placeholder `DATABASE_URL` is used solely for Prisma Client generation. On Vercel, where `DATABASE_URL` is required, committed migrations are applied before building. A valid, functional database is still required for runtime.
 
 ## Security
 
